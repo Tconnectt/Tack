@@ -1,8 +1,7 @@
 import { z } from "zod";
-import { equipmentStatus, maintenanceType } from "../db/schema.ts";
+import { equipmentStatus } from "../db/schema.ts";
 
 const text = (max: number) => z.string().trim().min(1).max(max);
-const interval = z.number().int().min(1).max(3650);
 
 export const createEquipmentSchema = z.object({
   name: text(120),
@@ -11,7 +10,6 @@ export const createEquipmentSchema = z.object({
   department: text(80),
   status: z.enum(equipmentStatus.enumValues).optional(),
   installedOn: z.iso.date().optional(),
-  serviceIntervalDays: interval.optional(),
   notes: z.string().trim().max(1000).optional(),
 });
 
@@ -23,7 +21,6 @@ export const updateEquipmentSchema = z
     department: text(80),
     status: z.enum(equipmentStatus.enumValues),
     installedOn: z.iso.date().nullable(),
-    serviceIntervalDays: interval.nullable(),
     notes: z.string().trim().max(1000).nullable(),
   })
   .partial()
@@ -36,11 +33,3 @@ export const listEquipmentQuerySchema = z.object({
 });
 
 export const idParamsSchema = z.object({ id: z.uuid() });
-
-export const createLogSchema = z.object({
-  performedOn: z.iso.date(),
-  type: z.enum(maintenanceType.enumValues),
-  description: z.string().trim().min(3).max(1000),
-  partsUsed: z.string().trim().min(1).max(500).optional(),
-  setStatus: z.enum(equipmentStatus.enumValues).optional(),
-});

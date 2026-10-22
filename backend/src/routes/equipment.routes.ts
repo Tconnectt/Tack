@@ -1,12 +1,10 @@
 import { Router } from "express";
 import type { Config } from "../config.ts";
 import type { Db } from "../db/types.ts";
-import { requireAuth, requireRole, type AuthUser } from "../middleware/auth.ts";
+import { requireAuth, requireRole } from "../middleware/auth.ts";
 import * as svc from "../services/equipment.service.ts";
-import * as maintenance from "../services/maintenance.service.ts";
 import {
   createEquipmentSchema,
-  createLogSchema,
   idParamsSchema,
   listEquipmentQuerySchema,
   updateEquipmentSchema,
@@ -19,32 +17,20 @@ export function equipmentRoutes(db: Db, config: Config) {
 
   r.get("/", async (req, res) => {
     const filters = listEquipmentQuerySchema.parse(req.query);
-    ok(res, await svc.listEquipment(db, config, filters));
+    ok(res, await svc.listEquipment(db, filters));
   });
   r.get("/:id", async (req, res) => {
     const { id } = idParamsSchema.parse(req.params);
-    ok(res, await svc.getEquipment(db, config, id));
+    ok(res, await svc.getEquipment(db, id));
   });
   r.post("/", requireRole("manager"), async (req, res) => {
     const input = createEquipmentSchema.parse(req.body);
-    ok(res, await svc.createEquipment(db, config, input), "Equipment added", 201);
+    ok(res, await svc.createEquipment(db, input), "Equipment added", 201);
   });
   r.patch("/:id", requireRole("manager"), async (req, res) => {
     const { id } = idParamsSchema.parse(req.params);
     const patch = updateEquipmentSchema.parse(req.body);
-    ok(res, await svc.updateEquipment(db, config, id, patch), "Equipment updated");
-  });
-
-  r.get("/:id/maintenance", async (req, res) => {
-    const { id } = idParamsSchema.parse(req.params);
-    ok(res, await maintenance.listLogs(db, id));
-  });
-  // Technicians and managers can both record work they did.
-  r.post("/:id/maintenance", async (req, res) => {
-    const { id } = idParamsSchema.parse(req.params);
-    const input = createLogSchema.parse(req.body);
-    const { userId } = res.locals.user as AuthUser;
-    ok(res, await maintenance.addLog(db, config, id, userId, input), "Service recorded", 201);
+    ok(res, await svc.updateEquipment(db, id, patch), "Equipment updated");
   });
   return r;
 }
