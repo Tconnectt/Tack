@@ -3,10 +3,6 @@ export interface Config {
   jwtExpiresIn: string;
   bcryptCost: number;
   frontendUrl?: string;
-  /** IANA timezone used to decide what "today" is. */
-  timezone: string;
-  /** Injectable clock, used by tests. */
-  now?: () => Date;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -19,6 +15,5 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     jwtExpiresIn: env.JWT_EXPIRES_IN ?? "1h",
     bcryptCost: 10,
     frontendUrl: env.FRONTEND_URL,
-    timezone: env.TIMEZONE ?? "Africa/Lagos",
   };
 }
