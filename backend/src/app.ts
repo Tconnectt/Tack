@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import type { Config } from "./config.ts";
 import type { Db } from "./db/types.ts";
 import { authRoutes } from "./routes/auth.routes.ts";
+import { dashboardRoutes } from "./routes/dashboard.routes.ts";
 import { equipmentRoutes } from "./routes/equipment.routes.ts";
 import { AppError } from "./utils/http.ts";
 
@@ -17,6 +18,7 @@ export function createApp(db: Db, config: Config) {
   });
   app.use("/api/auth", authRoutes(db, config));
   app.use("/api/equipment", equipmentRoutes(db, config));
+  app.use("/api/dashboard", dashboardRoutes(db, config));
 
   app.use((_req, res) => {
     res.status(404).json({ success: false, message: "Not found" });
