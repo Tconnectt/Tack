@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "migrate": "tsx src/db/migrate.ts",
     "seed": "tsx src/db/seed.ts",
-    "test": "node --import tsx --test tests/*.test.ts"
+    "test": "node --import tsx --test tests/*.test.ts",
+    "bundle": "esbuild src/vercel.ts --bundle --platform=node --format=esm --target=node22 --external:pg-native --banner:js=\"import{createRequire}from'module';const require=createRequire(import.meta.url);\" --outfile=api/index.js --log-level=warning"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
@@ -28,6 +29,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.15.0",
+    "esbuild": "^0.25.12",
     "tsx": "^4.20.0",
     "typescript": "^5.8.0"
   }
