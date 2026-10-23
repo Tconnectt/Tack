@@ -2,7 +2,16 @@
 
 Tack is a maintenance tracker for hospital medical equipment. It records what each machine is, where it is, when it was last serviced and when it is next due, so overdue work is easy to see.
 
-**Status:** the backend and the web app both work. A deployed demo is still to come.
+**Live demo:** https://tack-app-six.vercel.app
+
+Sign in with the demo manager (can add and edit equipment) or the demo technician (can view equipment and record service):
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Manager | `manager@tack-demo.dev` | `TackDemo2026!` |
+| Technician | `technician@tack-demo.dev` | `TackDemo2026!` |
+
+It is a public demo with made-up data, so other visitors may have changed what you see.
 
 ## Screenshots
 
@@ -50,6 +59,7 @@ cd backend
 npm install
 cp .env.example .env.local   # add DATABASE_URL and JWT_SECRET
 npm run migrate
+npm run seed                 # optional: demo accounts and sample equipment
 npm run dev                  # http://localhost:5000
 
 # web app (new terminal)
@@ -67,3 +77,11 @@ cd frontend && npm test                # unit tests
 cd frontend && npx playwright install chromium   # first time only
 cd frontend && npm run test:browser    # browser tests
 ```
+
+## Deployment
+
+The web app and the API are two Vercel projects, and the database is Postgres on Neon.
+
+- The API runs as one serverless function. `npm run build:vercel` in `backend` bundles the Express app into the Vercel Build Output format, and the build also runs the migrations and the seed.
+- The API needs `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_URL` (the exact address of the web app, for CORS) and `TIMEZONE`.
+- The web app is built with `VITE_API_URL` pointing at the API.
