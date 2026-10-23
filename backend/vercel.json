@@ -1,4 +1,3 @@
 {
-  "buildCommand": "npm run migrate && npm run seed && npm run bundle",
-  "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
+  "buildCommand": "npm run migrate && npm run seed && npm run build:vercel"
 }

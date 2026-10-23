@@ -10,7 +10,7 @@
     "migrate": "tsx src/db/migrate.ts",
     "seed": "tsx src/db/seed.ts",
     "test": "node --import tsx --test tests/*.test.ts",
-    "bundle": "esbuild src/vercel.ts --bundle --platform=node --format=esm --target=node22 --external:pg-native --banner:js=\"import{createRequire}from'module';const require=createRequire(import.meta.url);\" --outfile=api/index.js --log-level=warning"
+    "build:vercel": "node scripts/build-vercel.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
