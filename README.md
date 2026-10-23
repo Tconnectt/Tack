@@ -4,6 +4,12 @@ Tack is a maintenance tracker for hospital medical equipment. It records what ea
 
 **Status:** the backend and the web app both work. A deployed demo is still to come.
 
+## Screenshots
+
+| Dashboard | Equipment list | Equipment details |
+| --- | --- | --- |
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Equipment list](docs/screenshots/equipment-list.png) | ![Equipment details](docs/screenshots/equipment-details.png) |
+
 ## What it does
 
 - **Sign in** with two roles. The first account on a new system becomes the manager; everyone after is a technician.
