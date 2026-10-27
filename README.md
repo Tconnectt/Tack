@@ -21,11 +21,12 @@ It is a public demo with made-up data, so other visitors may have changed what y
 
 ## What it does
 
-- **Sign in** with two roles. The first account on a new system becomes the manager; everyone after is a technician.
+- **Sign in** with email and password, or with Google. There are two roles. The first account on a new system becomes the manager; everyone after is a technician.
 - **Dashboard** with counts by status, overdue and due-soon equipment, and recent work.
 - **Equipment list** with search and filters by status and department. The filters live in the address, so a refresh keeps them.
 - **Service schedule.** Give an item a service interval (for example every 90 days) and Tack works out the next due date and marks it on schedule, due soon (within 14 days) or overdue.
 - **Service records.** Technicians and managers record preventive work, repairs, inspections and calibrations with the date, a description and any parts used. Preventive work and calibrations restart the schedule; repairs and inspections do not. A record can also change the equipment's status in the same step.
+- **Change history.** Every addition, edit and status change is written to an append-only history, with who did it, when, and the old and new value of each field. Each equipment page shows it as a timeline.
 - **Roles.** Managers add and edit equipment. Technicians can view equipment and record service, and do not see add or edit buttons.
 - **Phone friendly.**
 
@@ -41,12 +42,13 @@ All data used while building is made up. Do not enter real patient information.
 
 | Method and path | Who | What |
 | --- | --- | --- |
-| `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` | anyone / signed in | Accounts |
+| `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/google`, `GET /api/auth/me` | anyone / signed in | Accounts. The Google route checks Google's token on the server |
 | `GET /api/equipment?status=&department=&q=` | signed in | List with schedule status |
 | `GET /api/equipment/:id` | signed in | One item |
 | `POST /api/equipment`, `PATCH /api/equipment/:id` | manager | Add and edit |
 | `GET /api/equipment/:id/maintenance` | signed in | Service history, newest first |
 | `POST /api/equipment/:id/maintenance` | signed in | Record service work |
+| `GET /api/equipment/:id/history` | signed in | Who changed what, newest first |
 | `GET /api/dashboard` | signed in | Totals, overdue, due soon, recent work |
 
 ## Run it
@@ -83,8 +85,9 @@ cd frontend && npm run test:browser    # browser tests
 The web app and the API are two Vercel projects, and the database is Postgres on Neon.
 
 - The API runs as one serverless function. `npm run build:vercel` in `backend` bundles the Express app into the Vercel Build Output format, and the build also runs the migrations. Run `npm run seed` once by hand to load the demo data.
-- The API needs `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_URL` (the exact address of the web app, for CORS) and `TIMEZONE`.
-- The web app is built with `VITE_API_URL` pointing at the API.
+- The API needs `DATABASE_URL`, `JWT_SECRET` (at least 32 characters), `FRONTEND_URL` (the exact address of the web app, for CORS) and `TIMEZONE`. `GOOGLE_CLIENT_ID` is optional; without it the Google route answers 501.
+- The web app is built with `VITE_API_URL` pointing at the API. Add `VITE_GOOGLE_CLIENT_ID` (the same public client id) to show the Google button; without it the button is hidden.
+- For Google sign-in, create an OAuth client of type Web application in Google Cloud and add the web app's address under Authorized JavaScript origins.
 - After a deploy, run `npm run smoke -- https://your-api-url` in `backend`. It checks that the database is reachable, the demo login works and a wrong password gets a 401 instead of a server error.
 
 ## Known limitations
@@ -93,6 +96,6 @@ These are deliberate choices for a demo with no real patient or hospital data. A
 
 - The sign-in token is kept in the browser's local storage. A production version would use an httpOnly cookie, which needs CSRF protection when the web app and the API are on different domains.
 - Sign-in rate limiting counts attempts in memory, so on serverless each running instance keeps its own count. It slows down password guessing but is not a global limit.
-- Service records can be added but not edited or deleted, and equipment cannot be deleted, only retired. Equipment edits are not yet written to a history table.
+- Service records can be added but not edited or deleted, and equipment cannot be deleted, only retired. Wrong records are not yet fixed by a correction entry.
 - Two managers editing the same item at the same time can overwrite each other. There is no version check yet.
 - Equipment with a service interval but no install date counts its schedule from the day it was added.

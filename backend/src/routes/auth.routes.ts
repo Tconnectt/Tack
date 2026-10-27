@@ -3,7 +3,7 @@ import type { Config } from "../config.ts";
 import type { Db } from "../db/types.ts";
 import { requireAuth, type AuthUser } from "../middleware/auth.ts";
 import * as auth from "../services/auth.service.ts";
-import { loginSchema, registerSchema } from "../validators/auth.validator.ts";
+import { googleSchema, loginSchema, registerSchema } from "../validators/auth.validator.ts";
 import { ok } from "../utils/http.ts";
 
 export function authRoutes(db: Db, config: Config) {
@@ -15,6 +15,10 @@ export function authRoutes(db: Db, config: Config) {
   r.post("/login", async (req, res) => {
     const input = loginSchema.parse(req.body);
     ok(res, await auth.login(db, config, input), "Signed in");
+  });
+  r.post("/google", async (req, res) => {
+    const { credential } = googleSchema.parse(req.body);
+    ok(res, await auth.loginWithGoogle(db, config, credential), "Signed in");
   });
   r.get("/me", requireAuth(db, config), async (_req, res) => {
     const { userId } = res.locals.user as AuthUser;

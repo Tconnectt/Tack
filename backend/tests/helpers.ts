@@ -17,13 +17,13 @@ export const testConfig: Config = {
   timezone: "Africa/Lagos",
 };
 
-export async function startTestApp(opts: { now?: () => Date } = {}) {
+export async function startTestApp(opts: { now?: () => Date; authRateLimit?: Config["authRateLimit"]; googleVerifier?: Config["googleVerifier"] } = {}) {
   const client = new PGlite();
   for (const file of readdirSync(migrationsDir).filter((f) => f.endsWith(".sql")).sort()) {
     await client.exec(readFileSync(join(migrationsDir, file), "utf8"));
   }
   const db = drizzle(client, { schema });
-  const server = createApp(db, { ...testConfig, now: opts.now }).listen(0);
+  const server = createApp(db, { ...testConfig, now: opts.now, authRateLimit: opts.authRateLimit, googleVerifier: opts.googleVerifier }).listen(0);
   await new Promise((r) => server.once("listening", r));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 

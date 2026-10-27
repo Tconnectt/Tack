@@ -1,4 +1,4 @@
-import { date, integer, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { date, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const userRole = pgEnum("user_role", ["manager", "technician"]);
 export const equipmentStatus = pgEnum("equipment_status", [
@@ -19,7 +19,9 @@ export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   email: text("email").notNull(),
-  passwordHash: text("password_hash").notNull(),
+  // Null for accounts that only sign in with Google.
+  passwordHash: text("password_hash"),
+  googleSub: text("google_sub").unique(),
   role: userRole("role").notNull().default("technician"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -60,3 +62,23 @@ export type MaintenanceType = (typeof maintenanceType.enumValues)[number];
 
 // Only these kinds of work reset the service schedule.
 export const SCHEDULED_TYPES: MaintenanceType[] = ["preventive", "calibration"];
+
+export type EquipmentEventKind = "created" | "updated" | "status_changed";
+export interface EventChange {
+  field: string;
+  from: string | number | null;
+  to: string | number | null;
+}
+
+export const equipmentEvents = pgTable("equipment_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  equipmentId: uuid("equipment_id")
+    .notNull()
+    .references(() => equipment.id, { onDelete: "restrict" }),
+  // Null for entries created before history tracking existed.
+  actorId: uuid("actor_id").references(() => users.id),
+  kind: text("kind").$type<EquipmentEventKind>().notNull(),
+  changes: jsonb("changes").$type<EventChange[]>().notNull().default([]),
+  logId: uuid("log_id").references(() => maintenanceLogs.id, { onDelete: "restrict" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

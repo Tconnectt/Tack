@@ -1,4 +1,4 @@
-import type { Dashboard, Equipment, EquipmentStatus, MaintenanceLog, MaintenanceType, User } from "./types";
+import type { Dashboard, Equipment, EquipmentEvent, EquipmentStatus, MaintenanceLog, MaintenanceType, User } from "./types";
 
 const BASE = (import.meta.env.VITE_API_URL ?? "http://localhost:5000").replace(/\/$/, "");
 const TOKEN_KEY = "tack.accessToken";
@@ -97,6 +97,7 @@ export const api = {
     request<{ user: User; token: string }>("POST", "/auth/login", { email, password }),
   register: (name: string, email: string, password: string) =>
     request<{ user: User; token: string }>("POST", "/auth/register", { name, email, password }),
+  googleSignIn: (credential: string) => request<{ user: User; token: string }>("POST", "/auth/google", { credential }),
   me: () => request<User>("GET", "/auth/me"),
   dashboard: () => request<Dashboard>("GET", "/dashboard"),
   listEquipment: (f: { q?: string; status?: string; department?: string }) => {
@@ -108,6 +109,7 @@ export const api = {
   getEquipment: (id: string) => request<Equipment>("GET", `/equipment/${id}`),
   createEquipment: (input: EquipmentInput) => request<Equipment>("POST", "/equipment", input),
   updateEquipment: (id: string, input: EquipmentInput) => request<Equipment>("PATCH", `/equipment/${id}`, input),
+  listHistory: (id: string) => request<EquipmentEvent[]>("GET", `/equipment/${id}/history`),
   listLogs: (id: string) => request<MaintenanceLog[]>("GET", `/equipment/${id}/maintenance`),
   addLog: (id: string, input: LogInput) => request<MaintenanceLog>("POST", `/equipment/${id}/maintenance`, input),
 };
