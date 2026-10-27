@@ -16,7 +16,7 @@ export function authRoutes(db: Db, config: Config) {
     const input = loginSchema.parse(req.body);
     ok(res, await auth.login(db, config, input), "Signed in");
   });
-  r.get("/me", requireAuth(config), async (_req, res) => {
+  r.get("/me", requireAuth(db, config), async (_req, res) => {
     const { userId } = res.locals.user as AuthUser;
     ok(res, await auth.getUser(db, userId));
   });
