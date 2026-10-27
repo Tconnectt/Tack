@@ -85,3 +85,14 @@ The web app and the API are two Vercel projects, and the database is Postgres on
 - The API runs as one serverless function. `npm run build:vercel` in `backend` bundles the Express app into the Vercel Build Output format, and the build also runs the migrations. Run `npm run seed` once by hand to load the demo data.
 - The API needs `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_URL` (the exact address of the web app, for CORS) and `TIMEZONE`.
 - The web app is built with `VITE_API_URL` pointing at the API.
+- After a deploy, run `npm run smoke -- https://your-api-url` in `backend`. It checks that the database is reachable, the demo login works and a wrong password gets a 401 instead of a server error.
+
+## Known limitations
+
+These are deliberate choices for a demo with no real patient or hospital data. A production version would change them.
+
+- The sign-in token is kept in the browser's local storage. A production version would use an httpOnly cookie, which needs CSRF protection when the web app and the API are on different domains.
+- Sign-in rate limiting counts attempts in memory, so on serverless each running instance keeps its own count. It slows down password guessing but is not a global limit.
+- Service records can be added but not edited or deleted, and equipment cannot be deleted, only retired. Equipment edits are not yet written to a history table.
+- Two managers editing the same item at the same time can overwrite each other. There is no version check yet.
+- Equipment with a service interval but no install date counts its schedule from the day it was added.

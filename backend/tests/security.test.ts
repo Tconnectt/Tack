@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { eq } from "drizzle-orm";
+import jwt from "jsonwebtoken";
 import { users } from "../src/db/schema.ts";
-import { startTestApp } from "./helpers.ts";
+import { startTestApp, testConfig } from "./helpers.ts";
 
 const equipment = { name: "Monitor", model: "MX450", serialNumber: "SEC-001", department: "ICU" };
 
@@ -41,5 +42,19 @@ describe("auth hardening", () => {
     await app.db.delete(users).where(eq(users.email, "gone@example.com"));
     const r = await app.call("GET", "/api/auth/me", { token: u.token });
     assert.equal(r.status, 401);
+  });
+
+  it("rejects an expired token and a token signed with another secret", async () => {
+    const u = await app.signUp("Late", "late@example.com");
+    const [row] = await app.db.select().from(users).where(eq(users.email, "late@example.com"));
+    const expired = jwt.sign({}, testConfig.jwtSecret, { subject: row.id, expiresIn: -10 });
+    const wrongSecret = jwt.sign({}, "some-other-secret", { subject: row.id, expiresIn: "1h" });
+    for (const token of [expired, wrongSecret]) {
+      const r = await app.call("GET", "/api/auth/me", { token });
+      assert.equal(r.status, 401);
+      assert.equal(r.body.code, "UNAUTHORIZED");
+    }
+    const good = await app.call("GET", "/api/auth/me", { token: u.token });
+    assert.equal(good.status, 200);
   });
 });

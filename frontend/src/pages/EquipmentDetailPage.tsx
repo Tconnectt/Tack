@@ -83,7 +83,7 @@ function RecordServiceForm({ equipmentId, onSaved }: { equipmentId: string; onSa
         <Field label="Parts used (optional)" htmlFor="partsUsed">
           <input id="partsUsed" value={partsUsed} onChange={(e) => setPartsUsed(e.target.value)} className={inputClass} />
         </Field>
-        <Field label="Change status to (optional)" htmlFor="setStatus">
+        <Field label="Change status to (optional)" htmlFor="setStatus" hint="This also changes the equipment's status, for example to Under maintenance.">
           <select id="setStatus" value={setStatus} onChange={(e) => setSetStatus(e.target.value as "" | EquipmentStatus)} className={inputClass}>
             <option value="">Leave as it is</option>
             {Object.entries(STATUS_LABELS).map(([value, label]) => (
