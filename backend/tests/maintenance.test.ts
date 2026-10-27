@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
+import { eq } from "drizzle-orm";
+import { equipment as equipmentTable } from "../src/db/schema.ts";
 import { startTestApp } from "./helpers.ts";
 
 // Fixed "now": 22 October 2026, midday in Lagos.
@@ -161,5 +163,13 @@ describe("maintenance and dashboard", () => {
     assert.equal(early.body.code, "DATE_BEFORE_INSTALL");
     const onDay = await log(e.id, { performedOn: "2026-06-01", type: "inspection", description: "Install check" });
     assert.equal(onDay.status, 201);
+  });
+
+  it("refuses to delete equipment that has service history", async () => {
+    const e = await add({ name: "Pump", serialNumber: "S-DEL", department: "Ward" });
+    await log(e.id, { performedOn: "2026-10-01", type: "inspection", description: "Checked" });
+    await assert.rejects(app.db.delete(equipmentTable).where(eq(equipmentTable.id, e.id)));
+    const list = await app.call("GET", `/api/equipment/${e.id}/maintenance`, { token: manager });
+    assert.equal(list.body.data.length, 1);
   });
 });

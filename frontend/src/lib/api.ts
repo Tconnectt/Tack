@@ -36,6 +36,13 @@ export function onUnauthorized(handler: (() => void) | null) {
   unauthorizedHandler = handler;
 }
 
+// Server problems get a calm message with a next step. 403s say who may do the action.
+function friendlyMessage(status: number, json: any): string {
+  if (status >= 500) return "The server had a problem. Please try again in a moment. If it keeps happening, contact the person who runs this system.";
+  if (status === 403 && json?.code === "FORBIDDEN") return "Only managers can do this.";
+  return json?.message ?? "Something went wrong. Please try again.";
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = getToken();
   let res: Response;
@@ -58,7 +65,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     /* non-JSON body */
   }
   if (!res.ok) {
-    const err = new ApiError(res.status, json?.message ?? "Something went wrong", json?.code, json?.issues ?? []);
+    const err = new ApiError(res.status, friendlyMessage(res.status, json), json?.code, json?.issues ?? []);
     // An expired or missing token: drop the session. A wrong password also returns 401, but with a different code.
     if (res.status === 401 && err.code === "UNAUTHORIZED") unauthorizedHandler?.();
     throw err;

@@ -45,7 +45,7 @@ export const maintenanceLogs = pgTable("maintenance_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
   equipmentId: uuid("equipment_id")
     .notNull()
-    .references(() => equipment.id, { onDelete: "cascade" }),
+    .references(() => equipment.id, { onDelete: "restrict" }),
   performedOn: date("performed_on", { mode: "string" }).notNull(),
   type: maintenanceType("type").notNull(),
   description: text("description").notNull(),
