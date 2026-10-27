@@ -25,8 +25,13 @@ const logColumns = {
 };
 
 async function assertEquipmentExists(db: Db, id: string) {
-  const [row] = await db.select({ id: equipment.id }).from(equipment).where(eq(equipment.id, id)).limit(1);
+  const [row] = await db
+    .select({ id: equipment.id, installedOn: equipment.installedOn })
+    .from(equipment)
+    .where(eq(equipment.id, id))
+    .limit(1);
   if (!row) throw new AppError(404, "Equipment not found", "NOT_FOUND");
+  return row;
 }
 
 export async function listLogs(db: Db, equipmentId: string) {
@@ -40,9 +45,12 @@ export async function listLogs(db: Db, equipmentId: string) {
 }
 
 export async function addLog(db: Db, config: Config, equipmentId: string, userId: string, input: LogInput) {
-  await assertEquipmentExists(db, equipmentId);
+  const item = await assertEquipmentExists(db, equipmentId);
   if (input.performedOn > todayIn(config)) {
     throw new AppError(400, "The service date cannot be in the future", "DATE_IN_FUTURE");
+  }
+  if (item.installedOn && input.performedOn < item.installedOn) {
+    throw new AppError(400, "The service date cannot be before the equipment was installed", "DATE_BEFORE_INSTALL");
   }
   // The log and the optional status change succeed or fail together.
   const id = await db.transaction(async (tx) => {

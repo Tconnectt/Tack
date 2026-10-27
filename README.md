@@ -82,6 +82,6 @@ cd frontend && npm run test:browser    # browser tests
 
 The web app and the API are two Vercel projects, and the database is Postgres on Neon.
 
-- The API runs as one serverless function. `npm run build:vercel` in `backend` bundles the Express app into the Vercel Build Output format, and the build also runs the migrations and the seed.
+- The API runs as one serverless function. `npm run build:vercel` in `backend` bundles the Express app into the Vercel Build Output format, and the build also runs the migrations. Run `npm run seed` once by hand to load the demo data.
 - The API needs `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_URL` (the exact address of the web app, for CORS) and `TIMEZONE`.
 - The web app is built with `VITE_API_URL` pointing at the API.

@@ -46,6 +46,7 @@ export async function startTestApp(opts: { now?: () => Date } = {}) {
 
   return {
     db,
+    base,
     call,
     signUp,
     async close() {

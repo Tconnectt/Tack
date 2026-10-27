@@ -153,4 +153,13 @@ describe("maintenance and dashboard", () => {
     assert.deepEqual(logDates, [...logDates].sort().reverse());
     assert.ok(d.recentLogs[0].equipmentName);
   });
+
+  it("rejects a service date before the equipment was installed", async () => {
+    const e = await add({ name: "Scanner", serialNumber: "S-INST", department: "Radiology", installedOn: "2026-06-01" });
+    const early = await log(e.id, { performedOn: "2026-05-31", type: "preventive", description: "Too early" });
+    assert.equal(early.status, 400);
+    assert.equal(early.body.code, "DATE_BEFORE_INSTALL");
+    const onDay = await log(e.id, { performedOn: "2026-06-01", type: "inspection", description: "Install check" });
+    assert.equal(onDay.status, 201);
+  });
 });
