@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { ApiError, api } from "../lib/api";
+import { GoogleButton } from "../components/GoogleButton";
 import { Card, ErrorNotice, Field, inputClass, primaryButton } from "../components/ui";
 
 function Shell({ title, children }: { title: string; children: React.ReactNode }) {
@@ -50,6 +51,17 @@ export function LoginPage() {
     }
   }
 
+  async function withGoogle(credential: string) {
+    setError("");
+    try {
+      const r = await api.googleSignIn(credential);
+      signIn(r.token, r.user);
+      navigate(from, { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    }
+  }
+
   return (
     <Shell title="Sign in">
       {sessionEnded && !error && (
@@ -69,6 +81,7 @@ export function LoginPage() {
           {busy ? "Signing in…" : "Sign in"}
         </button>
       </form>
+      <GoogleButton onCredential={withGoogle} onError={setError} />
       <p className="mt-4 text-center text-sm text-slate-700">
         New here?{" "}
         <Link to="/register" className="font-medium text-teal-800 underline">
@@ -113,6 +126,17 @@ export function RegisterPage() {
     }
   }
 
+  async function withGoogle(credential: string) {
+    setError("");
+    try {
+      const r = await api.googleSignIn(credential);
+      signIn(r.token, r.user);
+      navigate("/", { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    }
+  }
+
   return (
     <Shell title="Create an account">
       <form onSubmit={submit} className="space-y-4" noValidate>
@@ -130,6 +154,7 @@ export function RegisterPage() {
           {busy ? "Creating account…" : "Create account"}
         </button>
       </form>
+      <GoogleButton onCredential={withGoogle} onError={setError} />
       <p className="mt-4 text-center text-sm text-slate-700">
         Already have an account?{" "}
         <Link to="/login" className="font-medium text-teal-800 underline">

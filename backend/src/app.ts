@@ -1,6 +1,8 @@
 import cors from "cors";
 import { sql } from "drizzle-orm";
 import express, { type NextFunction, type Request, type Response } from "express";
+import { rateLimit } from "express-rate-limit";
+import helmet from "helmet";
 import { ZodError } from "zod";
 import type { Config } from "./config.ts";
 import type { Db } from "./db/types.ts";
@@ -11,6 +13,9 @@ import { AppError } from "./utils/http.ts";
 
 export function createApp(db: Db, config: Config) {
   const app = express();
+  // Behind Vercel's proxy, so the real client IP is the one it forwards.
+  app.set("trust proxy", 1);
+  app.use(helmet());
   // No FRONTEND_URL means no browser origin is allowed, instead of allowing every site.
   app.use(cors({ origin: config.frontendUrl ?? false }));
   app.use(express.json());
@@ -25,6 +30,25 @@ export function createApp(db: Db, config: Config) {
       res.status(503).json({ success: false, message: "Database unavailable", code: "DB_DOWN" });
     }
   });
+  if (config.authRateLimit) {
+    // Counts live in memory, so on serverless each warm instance keeps its own count.
+    // This slows down guessing; it is not a hard global limit.
+    const limiter = rateLimit({
+      ...config.authRateLimit,
+      standardHeaders: "draft-7",
+      legacyHeaders: false,
+      handler: (_req, res) => {
+        res.status(429).json({
+          success: false,
+          message: "Too many attempts. Try again in a few minutes",
+          code: "RATE_LIMITED",
+        });
+      },
+    });
+    app.use("/api/auth/login", limiter);
+    app.use("/api/auth/register", limiter);
+    app.use("/api/auth/google", limiter);
+  }
   app.use("/api/auth", authRoutes(db, config));
   app.use("/api/equipment", equipmentRoutes(db, config));
   app.use("/api/dashboard", dashboardRoutes(db, config));
