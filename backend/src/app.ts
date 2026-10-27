@@ -1,4 +1,5 @@
 import cors from "cors";
+import { sql } from "drizzle-orm";
 import express, { type NextFunction, type Request, type Response } from "express";
 import { ZodError } from "zod";
 import type { Config } from "./config.ts";
@@ -13,8 +14,15 @@ export function createApp(db: Db, config: Config) {
   app.use(cors({ origin: config.frontendUrl ?? true }));
   app.use(express.json());
 
-  app.get("/api/health", (_req, res) => {
-    res.json({ success: true, message: "OK", data: null });
+  // Checks the database too, so a bad connection shows up here instead of as a login 500.
+  app.get("/api/health", async (_req, res) => {
+    try {
+      await db.execute(sql`select 1`);
+      res.json({ success: true, message: "OK", data: { database: "up" } });
+    } catch (err) {
+      console.error("Health check failed:", err);
+      res.status(503).json({ success: false, message: "Database unavailable", code: "DB_DOWN" });
+    }
   });
   app.use("/api/auth", authRoutes(db, config));
   app.use("/api/equipment", equipmentRoutes(db, config));
