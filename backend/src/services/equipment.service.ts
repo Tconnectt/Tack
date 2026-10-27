@@ -1,7 +1,15 @@
-import { and, asc, eq, ilike, inArray, max, or } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, max, or } from "drizzle-orm";
 import type { Config } from "../config.ts";
 import type { Db } from "../db/types.ts";
-import { equipment, maintenanceLogs, SCHEDULED_TYPES, type EquipmentStatus } from "../db/schema.ts";
+import {
+  equipment,
+  equipmentEvents,
+  maintenanceLogs,
+  SCHEDULED_TYPES,
+  users,
+  type EquipmentStatus,
+  type EventChange,
+} from "../db/schema.ts";
 import { todayIn } from "../utils/dates.ts";
 import { AppError, isUniqueViolation } from "../utils/http.ts";
 import { computeSchedule } from "./schedule.ts";
@@ -56,10 +64,25 @@ export async function getEquipment(db: Db, config: Config, id: string) {
   return row;
 }
 
-export async function createEquipment(db: Db, config: Config, input: typeof equipment.$inferInsert) {
+const TRACKED_FIELDS = [
+  "name",
+  "model",
+  "serialNumber",
+  "department",
+  "status",
+  "installedOn",
+  "serviceIntervalDays",
+  "notes",
+] as const;
+
+export async function createEquipment(db: Db, config: Config, actorId: string, input: typeof equipment.$inferInsert) {
   try {
-    const [row] = await db.insert(equipment).values(input).returning({ id: equipment.id });
-    return getEquipment(db, config, row.id);
+    const id = await db.transaction(async (tx) => {
+      const [row] = await tx.insert(equipment).values(input).returning({ id: equipment.id });
+      await tx.insert(equipmentEvents).values({ equipmentId: row.id, actorId, kind: "created" });
+      return row.id;
+    });
+    return getEquipment(db, config, id);
   } catch (err) {
     if (isUniqueViolation(err)) throw new AppError(409, "Equipment with this serial number already exists", "SERIAL_EXISTS");
     throw err;
@@ -69,19 +92,47 @@ export async function createEquipment(db: Db, config: Config, input: typeof equi
 export async function updateEquipment(
   db: Db,
   config: Config,
+  actorId: string,
   id: string,
   patch: Partial<typeof equipment.$inferInsert>,
 ) {
   try {
-    const [row] = await db
-      .update(equipment)
-      .set({ ...patch, updatedAt: new Date() })
-      .where(eq(equipment.id, id))
-      .returning({ id: equipment.id });
-    if (!row) throw new AppError(404, "Equipment not found", "NOT_FOUND");
+    await db.transaction(async (tx) => {
+      const [current] = await tx.select().from(equipment).where(eq(equipment.id, id)).for("update");
+      if (!current) throw new AppError(404, "Equipment not found", "NOT_FOUND");
+      const changes: EventChange[] = [];
+      for (const field of TRACKED_FIELDS) {
+        if (!(field in patch)) continue;
+        const to = (patch[field] ?? null) as EventChange["to"];
+        const from = (current[field] ?? null) as EventChange["from"];
+        if (to !== from) changes.push({ field, from, to });
+      }
+      await tx.update(equipment).set({ ...patch, updatedAt: new Date() }).where(eq(equipment.id, id));
+      if (changes.length > 0) {
+        await tx.insert(equipmentEvents).values({ equipmentId: id, actorId, kind: "updated", changes });
+      }
+    });
     return getEquipment(db, config, id);
   } catch (err) {
     if (isUniqueViolation(err)) throw new AppError(409, "Equipment with this serial number already exists", "SERIAL_EXISTS");
     throw err;
   }
+}
+
+export async function listHistory(db: Db, equipmentId: string) {
+  const [item] = await db.select({ id: equipment.id }).from(equipment).where(eq(equipment.id, equipmentId)).limit(1);
+  if (!item) throw new AppError(404, "Equipment not found", "NOT_FOUND");
+  return db
+    .select({
+      id: equipmentEvents.id,
+      kind: equipmentEvents.kind,
+      changes: equipmentEvents.changes,
+      logId: equipmentEvents.logId,
+      actorName: users.name,
+      createdAt: equipmentEvents.createdAt,
+    })
+    .from(equipmentEvents)
+    .leftJoin(users, eq(users.id, equipmentEvents.actorId))
+    .where(eq(equipmentEvents.equipmentId, equipmentId))
+    .orderBy(desc(equipmentEvents.createdAt), desc(equipmentEvents.id));
 }

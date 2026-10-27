@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { dueText, formatDate, todayInZone } from "../src/lib/format.ts";
+import { describeEvent, dueText, formatDate, formatDateTime, todayInZone } from "../src/lib/format.ts";
 
 describe("dueText", () => {
   it("says how overdue an item is, with correct singular and plural", () => {
@@ -32,5 +32,40 @@ describe("todayInZone", () => {
     const lateEveningUtc = new Date("2026-10-22T23:30:00Z");
     assert.equal(todayInZone("Africa/Lagos", lateEveningUtc), "2026-10-23");
     assert.equal(todayInZone("UTC", lateEveningUtc), "2026-10-22");
+  });
+});
+
+describe("describeEvent", () => {
+  it("writes one line per changed field with readable values", () => {
+    const lines = describeEvent({
+      kind: "updated",
+      actorName: "Ada",
+      changes: [
+        { field: "status", from: "in_service", to: "retired" },
+        { field: "installedOn", from: null, to: "2026-01-05" },
+        { field: "serviceIntervalDays", from: 90, to: 120 },
+      ],
+    });
+    assert.deepEqual(lines, [
+      "Status: In service to Retired",
+      "Installed on: empty to 5 Jan 2026",
+      "Service interval (days): 90 to 120",
+    ]);
+  });
+  it("does not print note text in the timeline", () => {
+    assert.deepEqual(describeEvent({ kind: "updated", actorName: "Ada", changes: [{ field: "notes", from: null, to: "secret" }] }), ["Notes added"]);
+  });
+  it("explains created and service-driven status entries", () => {
+    assert.deepEqual(describeEvent({ kind: "created", actorName: null, changes: [] }), ["Added to the register (before history tracking)"]);
+    assert.match(
+      describeEvent({ kind: "status_changed", actorName: "Tunde", changes: [{ field: "status", from: "in_service", to: "out_of_service" }] })[0],
+      /service record.*Out of service/,
+    );
+  });
+});
+
+describe("formatDateTime", () => {
+  it("formats in the requested timezone", () => {
+    assert.equal(formatDateTime("2026-10-22T13:05:00Z", "Africa/Lagos"), "22 Oct 2026, 14:05");
   });
 });

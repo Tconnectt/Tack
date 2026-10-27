@@ -49,3 +49,19 @@ export interface Dashboard {
   dueSoon: Equipment[];
   recentLogs: RecentLog[];
 }
+
+export interface EventChange {
+  field: string;
+  from: string | number | null;
+  to: string | number | null;
+}
+
+export interface EquipmentEvent {
+  id: string;
+  kind: "created" | "updated" | "status_changed";
+  changes: EventChange[];
+  logId: string | null;
+  /** Null for entries from before history tracking. */
+  actorName: string | null;
+  createdAt: string;
+}

@@ -176,11 +176,35 @@ async function main() {
             item.notes ?? null,
           ],
         );
+        await client.query(
+          `INSERT INTO equipment_events (equipment_id, actor_id, kind, created_at)
+           VALUES ($1, $2, 'created', now() - ($3 || ' days')::interval)`,
+          // Added before its oldest service record, so the history reads in order.
+          [e.rows[0].id, ids.m, String(Math.max(60, ...item.logs.map((l) => l.ago)) + 5)],
+        );
+        let lastLogId: string | null = null;
+        let lastLogAgo = 0;
         for (const log of item.logs) {
-          await client.query(
+          const l = await client.query(
             `INSERT INTO maintenance_logs (equipment_id, performed_on, type, description, parts_used, performed_by)
-             VALUES ($1, $2, $3, $4, $5, $6)`,
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
             [e.rows[0].id, daysAgo(log.ago), log.type, log.what, log.parts ?? null, ids[log.by]],
+          );
+          lastLogId = l.rows[0].id;
+          lastLogAgo = log.ago;
+        }
+        // Items that are not in service got there through a recorded status change.
+        if (item.status && item.status !== "in_service" && item.logs.length > 0) {
+          await client.query(
+            `INSERT INTO equipment_events (equipment_id, actor_id, kind, changes, log_id, created_at)
+             VALUES ($1, $2, 'status_changed', $3::jsonb, $4, now() - ($5 || ' days')::interval)`,
+            [
+              e.rows[0].id,
+              ids.t,
+              JSON.stringify([{ field: "status", from: "in_service", to: item.status }]),
+              lastLogId,
+              String(lastLogAgo),
+            ],
           );
         }
       }

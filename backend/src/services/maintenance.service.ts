@@ -1,7 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import type { Config } from "../config.ts";
 import type { Db } from "../db/types.ts";
-import { equipment, maintenanceLogs, users, type EquipmentStatus, type MaintenanceType } from "../db/schema.ts";
+import { equipment, equipmentEvents, maintenanceLogs, users, type EquipmentStatus, type MaintenanceType } from "../db/schema.ts";
 import { todayIn } from "../utils/dates.ts";
 import { AppError } from "../utils/http.ts";
 
@@ -66,7 +66,17 @@ export async function addLog(db: Db, config: Config, equipmentId: string, userId
       })
       .returning({ id: maintenanceLogs.id });
     if (input.setStatus) {
-      await tx.update(equipment).set({ status: input.setStatus, updatedAt: new Date() }).where(eq(equipment.id, equipmentId));
+      const [before] = await tx.select({ status: equipment.status }).from(equipment).where(eq(equipment.id, equipmentId)).for("update");
+      if (before.status !== input.setStatus) {
+        await tx.update(equipment).set({ status: input.setStatus, updatedAt: new Date() }).where(eq(equipment.id, equipmentId));
+        await tx.insert(equipmentEvents).values({
+          equipmentId,
+          actorId: userId,
+          kind: "status_changed",
+          changes: [{ field: "status", from: before.status, to: input.setStatus }],
+          logId: log.id,
+        });
+      }
     }
     return log.id;
   });
