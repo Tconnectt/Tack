@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { count, eq } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 import type { Config } from "../config.ts";
 import type { Db } from "../db/types.ts";
 import { users } from "../db/schema.ts";
@@ -16,14 +16,19 @@ export async function register(
   input: { name: string; email: string; password: string },
 ) {
   const passwordHash = await bcrypt.hash(input.password, config.bcryptCost);
-  // The very first account becomes the manager; everyone after is a technician.
-  const [{ total }] = await db.select({ total: count() }).from(users);
-  const role = total === 0 ? "manager" : "technician";
   try {
-    const [user] = await db
-      .insert(users)
-      .values({ name: input.name, email: input.email, passwordHash, role })
-      .returning();
+    // The lock makes "count users, then insert" atomic, so two simultaneous first sign-ups
+    // cannot both become manager.
+    const user = await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(727001)`);
+      const [{ total }] = await tx.select({ total: count() }).from(users);
+      const role = total === 0 ? "manager" : "technician";
+      const [created] = await tx
+        .insert(users)
+        .values({ name: input.name, email: input.email, passwordHash, role })
+        .returning();
+      return created;
+    });
     return { user: publicUser(user), token: signToken(config, { userId: user.id, role: user.role }) };
   } catch (err) {
     if (isUniqueViolation(err)) throw new AppError(409, "An account with this email already exists", "EMAIL_EXISTS");

@@ -15,7 +15,7 @@ import { ok } from "../utils/http.ts";
 
 export function equipmentRoutes(db: Db, config: Config) {
   const r = Router();
-  r.use(requireAuth(config));
+  r.use(requireAuth(db, config));
 
   r.get("/", async (req, res) => {
     const filters = listEquipmentQuerySchema.parse(req.query);

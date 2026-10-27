@@ -7,7 +7,7 @@ import { ok } from "../utils/http.ts";
 
 export function dashboardRoutes(db: Db, config: Config) {
   const r = Router();
-  r.use(requireAuth(config));
+  r.use(requireAuth(db, config));
   r.get("/", async (_req, res) => {
     ok(res, await getDashboard(db, config));
   });
