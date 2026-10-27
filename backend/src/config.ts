@@ -14,6 +14,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (!jwtSecret || jwtSecret.startsWith("replace-with")) {
     throw new Error("JWT_SECRET is missing. Set it in backend/.env.local");
   }
+  if (jwtSecret.length < 32) {
+    throw new Error("JWT_SECRET is too short. Use at least 32 characters (see .env.example)");
+  }
   return {
     jwtSecret,
     jwtExpiresIn: env.JWT_EXPIRES_IN ?? "1h",

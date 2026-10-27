@@ -11,7 +11,8 @@ import { AppError } from "./utils/http.ts";
 
 export function createApp(db: Db, config: Config) {
   const app = express();
-  app.use(cors({ origin: config.frontendUrl ?? true }));
+  // No FRONTEND_URL means no browser origin is allowed, instead of allowing every site.
+  app.use(cors({ origin: config.frontendUrl ?? false }));
   app.use(express.json());
 
   // Checks the database too, so a bad connection shows up here instead of as a login 500.
