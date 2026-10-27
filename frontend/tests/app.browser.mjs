@@ -92,10 +92,13 @@ function handle(state, req, path, search, body, user) {
     return ok(item, 201);
   }
 
-  const m = path.match(/^\/api\/equipment\/([^/]+)(\/maintenance)?$/);
+  const m = path.match(/^\/api\/equipment\/([^/]+)(\/maintenance|\/history)?$/);
   if (m) {
     const item = state.equipment.find((e) => e.id === m[1]);
     if (!item) return fail(404, "Equipment not found", "NOT_FOUND");
+    if (m[2] === "/history") {
+      return ok([{ id: `h-${item.id}`, kind: "created", changes: [], logId: null, actorName: "Ada Manager", createdAt: "2026-10-01T09:30:00Z" }]);
+    }
     if (m[2] && req.method() === "GET") return ok([...(state.logs[item.id] ?? [])].sort((a, b) => b.performedOn.localeCompare(a.performedOn)));
     if (m[2] && req.method() === "POST") {
       if (state.rejectNextLog) {
@@ -442,6 +445,9 @@ describe("equipment details and recording service", () => {
     assert.ok(await page.getByText("Next to the nurses station").isVisible());
     assert.ok(await page.getByText("Cleaned leads and tested output").isVisible());
     assert.ok(await page.getByText("Parts: Electrode gel").isVisible());
+    assert.ok(await page.getByRole("heading", { name: "Change history" }).isVisible());
+    assert.ok(await page.getByText("Added to the register").isVisible());
+    assert.ok(await page.getByText("1 Oct 2026, 10:30 · Ada Manager").isVisible());
     await close();
   });
 

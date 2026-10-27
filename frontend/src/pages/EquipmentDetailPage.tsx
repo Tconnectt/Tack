@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { ApiError, api } from "../lib/api";
-import { dueText, formatDate, STATUS_LABELS, todayInZone, TYPE_LABELS } from "../lib/format";
+import { describeEvent, dueText, formatDate, formatDateTime, STATUS_LABELS, todayInZone, TYPE_LABELS } from "../lib/format";
 import type { EquipmentStatus, MaintenanceType } from "../lib/types";
 import { useLoad } from "../lib/useLoad";
 import { Card, DueBadge, ErrorNotice, Field, Spinner, StatusBadge, inputClass, primaryButton, secondaryButton } from "../components/ui";
@@ -105,13 +105,13 @@ export function EquipmentDetailPage() {
   const { id = "" } = useParams();
   const { user } = useAuth();
   const { data, error, loading, reload } = useLoad(
-    () => Promise.all([api.getEquipment(id), api.listLogs(id)]),
+    () => Promise.all([api.getEquipment(id), api.listLogs(id), api.listHistory(id)]),
     `detail|${id}`,
   );
 
   if (loading && !data) return <Spinner />;
   if (error || !data) return <ErrorNotice message={error ?? "Something went wrong"} onRetry={reload} />;
-  const [item, logs] = data;
+  const [item, logs, history] = data;
 
   return (
     <div className="space-y-6">
@@ -183,6 +183,24 @@ export function EquipmentDetailPage() {
             ))}
           </ul>
         )}
+      </Card>
+
+      <Card title="Change history">
+        <ul className="divide-y divide-slate-100">
+          {history.map((e) => (
+            <li key={e.id} className="py-3">
+              <p className="text-sm text-slate-600">
+                {formatDateTime(e.createdAt, TIMEZONE)}
+                {e.actorName ? ` · ${e.actorName}` : ""}
+              </p>
+              {describeEvent(e).map((line) => (
+                <p key={line} className="text-slate-800">
+                  {line}
+                </p>
+              ))}
+            </li>
+          ))}
+        </ul>
       </Card>
     </div>
   );

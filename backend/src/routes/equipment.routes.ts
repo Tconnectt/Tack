@@ -27,12 +27,18 @@ export function equipmentRoutes(db: Db, config: Config) {
   });
   r.post("/", requireRole("manager"), async (req, res) => {
     const input = createEquipmentSchema.parse(req.body);
-    ok(res, await svc.createEquipment(db, config, input), "Equipment added", 201);
+    const { userId } = res.locals.user as AuthUser;
+    ok(res, await svc.createEquipment(db, config, userId, input), "Equipment added", 201);
   });
   r.patch("/:id", requireRole("manager"), async (req, res) => {
     const { id } = idParamsSchema.parse(req.params);
     const patch = updateEquipmentSchema.parse(req.body);
-    ok(res, await svc.updateEquipment(db, config, id, patch), "Equipment updated");
+    const { userId } = res.locals.user as AuthUser;
+    ok(res, await svc.updateEquipment(db, config, userId, id, patch), "Equipment updated");
+  });
+  r.get("/:id/history", async (req, res) => {
+    const { id } = idParamsSchema.parse(req.params);
+    ok(res, await svc.listHistory(db, id));
   });
 
   r.get("/:id/maintenance", async (req, res) => {
